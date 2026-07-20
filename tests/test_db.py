@@ -26,7 +26,7 @@ def test_tables_exist(temp_db):
     tables = [row["name"] for row in cursor.fetchall()]
     conn.close()
     
-    expected_tables = {"users", "order_history", "patterns", "approvals", "persona_snapshots"}
+    expected_tables = {"users", "order_history", "patterns", "approvals", "persona_snapshots", "items"}
     
     # Check that all expected tables are a subset of the actual tables in SQLite
     for table in expected_tables:

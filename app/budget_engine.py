@@ -53,15 +53,23 @@ def save_approval(db_path: str, approval: dict[str, Any]) -> int:
     """
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
+    
+    # Query item_id from patterns table
+    pattern_id = approval.get("pattern_id")
+    cursor.execute("SELECT item_id FROM patterns WHERE id = ?;", (pattern_id,))
+    pat_row = cursor.fetchone()
+    item_id = pat_row["item_id"] if pat_row else None
+    
     cursor.execute("""
-        INSERT INTO approvals (pattern_id, proposed_date, proposed_cost, user_response, responded_at)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO approvals (pattern_id, proposed_date, proposed_cost, user_response, responded_at, item_id)
+        VALUES (?, ?, ?, ?, ?, ?);
     """, (
-        approval.get("pattern_id"),
+        pattern_id,
         approval.get("proposed_date"),
         approval.get("proposed_cost"),
         approval.get("user_response"),
-        approval.get("responded_at")
+        approval.get("responded_at"),
+        item_id
     ))
     inserted_id = cursor.lastrowid
     conn.commit()

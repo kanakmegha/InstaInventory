@@ -73,7 +73,7 @@ def get_order_history() -> list[dict[str, Any]]:
             )
         conn = get_db_connection(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, item_name, quantity, unit, price, ordered_at FROM order_history;")
+        cursor.execute("SELECT id, item_name, quantity, unit, price, ordered_at, order_source, item_id FROM order_history;")
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
@@ -122,6 +122,43 @@ def find_pack_size_options(item_name: str) -> list[dict[str, Any]]:
     """
     Wraps search_products tool. Returns product variants with parsed fields and price_per_unit.
     """
+    use_mock = os.getenv("USE_MOCK_DATA", USE_MOCK_DATA_DEFAULT).lower() == "true"
+    if use_mock:
+        normalized_query = item_name.lower().strip()
+        mock_variants = {
+            "milk": [
+                {"variant_id": "milk-500ml", "item_name": "Nandini Milk (500 ml)", "pack_size": "500 ml", "price": 28.0, "price_per_unit": 0.056, "unit": "ml"},
+                {"variant_id": "milk-1l", "item_name": "Nandini Milk (1 litre)", "pack_size": "1 litre", "price": 40.0, "price_per_unit": 40.0, "unit": "litre"}
+            ],
+            "tomato": [
+                {"variant_id": "tomato-500g", "item_name": "Fresh Tomato (500 g)", "pack_size": "500 g", "price": 25.0, "price_per_unit": 0.05, "unit": "g"},
+                {"variant_id": "tomato-1kg", "item_name": "Fresh Tomato (1 kg)", "pack_size": "1 kg", "price": 45.0, "price_per_unit": 45.0, "unit": "kg"}
+            ],
+            "onion": [
+                {"variant_id": "onion-1kg", "item_name": "Fresh Onion (1 kg)", "pack_size": "1 kg", "price": 35.0, "price_per_unit": 35.0, "unit": "kg"},
+                {"variant_id": "onion-2kg", "item_name": "Fresh Onion (2 kg)", "pack_size": "2 kg", "price": 60.0, "price_per_unit": 30.0, "unit": "kg"}
+            ],
+            "eggs": [
+                {"variant_id": "eggs-6pc", "item_name": "Fresh Eggs (6 pc)", "pack_size": "6 pc", "price": 42.0, "price_per_unit": 7.0, "unit": "pc"},
+                {"variant_id": "eggs-12pc", "item_name": "Fresh Eggs (12 pc)", "pack_size": "12 pc", "price": 78.0, "price_per_unit": 6.5, "unit": "pc"}
+            ],
+            "rice": [
+                {"variant_id": "rice-1kg", "item_name": "Premium Rice (1 kg)", "pack_size": "1 kg", "price": 75.0, "price_per_unit": 75.0, "unit": "kg"},
+                {"variant_id": "rice-5kg", "item_name": "Premium Rice (5 kg)", "pack_size": "5 kg", "price": 325.0, "price_per_unit": 65.0, "unit": "kg"}
+            ],
+            "oil": [
+                {"variant_id": "oil-1l", "item_name": "Sunflower Oil (1 litre)", "pack_size": "1 litre", "price": 140.0, "price_per_unit": 140.0, "unit": "litre"},
+                {"variant_id": "oil-2l", "item_name": "Sunflower Oil (2 litre)", "pack_size": "2 litre", "price": 270.0, "price_per_unit": 135.0, "unit": "litre"}
+            ]
+        }
+        for key, options in mock_variants.items():
+            if key in normalized_query:
+                return options
+        return [
+            {"variant_id": f"{normalized_query}-regular", "item_name": f"{item_name} (Regular)", "pack_size": "1 unit", "price": 50.0, "price_per_unit": 50.0, "unit": "unit"},
+            {"variant_id": f"{normalized_query}-bulk", "item_name": f"{item_name} (Bulk Pack)", "pack_size": "5 units", "price": 200.0, "price_per_unit": 40.0, "unit": "unit"}
+        ]
+
     resp = _call_mcp_tool("search_products", {"query": item_name})
     result = resp.get("result", {})
     
@@ -171,6 +208,14 @@ def get_frequent_items() -> list[dict[str, Any]]:
     """
     Wraps the your_go_to_items tool. Returns frequently purchased items list.
     """
+    use_mock = os.getenv("USE_MOCK_DATA", USE_MOCK_DATA_DEFAULT).lower() == "true"
+    if use_mock:
+        return [
+            {"name": "milk", "frequency": 40},
+            {"name": "tomato", "frequency": 16},
+            {"name": "eggs", "frequency": 9}
+        ]
+
     resp = _call_mcp_tool("your_go_to_items", {})
     result = resp.get("result", {})
     
@@ -193,6 +238,14 @@ def build_cart(items: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Wraps the update_cart tool.
     """
+    use_mock = os.getenv("USE_MOCK_DATA", USE_MOCK_DATA_DEFAULT).lower() == "true"
+    if use_mock:
+        return {
+            "status": "success",
+            "items_added": items,
+            "cart_total": sum(50.0 * float(item.get("quantity", 1.0)) for item in items)
+        }
+
     resp = _call_mcp_tool("update_cart", {"items": items})
     return resp.get("result", resp)
 
@@ -204,5 +257,13 @@ def place_order() -> dict[str, Any]:
     IT MUST ONLY EVER BE CALLED AFTER EXPLICIT HUMAN CONFIRMATION.
     DO NOT CALL THIS AUTOMATICALLY OR FROM ANY UNIT TEST.
     """
+    use_mock = os.getenv("USE_MOCK_DATA", USE_MOCK_DATA_DEFAULT).lower() == "true"
+    if use_mock:
+        return {
+            "status": "success",
+            "message": "Checkout completed successfully in MOCK mode.",
+            "transaction_id": "mock_tx_98765"
+        }
+
     resp = _call_mcp_tool("checkout", {})
     return resp.get("result", resp)

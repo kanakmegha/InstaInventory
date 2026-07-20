@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InstaInventory — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F5F0;
+    --ink:#20261D;
+    --ink-soft:#5B6155;
+    --green:#2F5233;
+    --green-light:#E4EBDE;
+    --amber:#B97318;
+    --amber-light:#FBEEDA;
+    --coral:#B4432C;
+    --coral-light:#FBE6E0;
+    --line:#D8D5C9;
+    --card:#FFFFFF;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 60px;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand-mark{
+    width:28px;height:28px;border-radius:8px;background:var(--green);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:15px;
+    flex-shrink:0;
+  }
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0;letter-spacing:-0.01em;}
+  .brand span{color:var(--ink-soft);font-size:13px;}
+
+  /* Dashboard Grid Layout */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 32px;
+    margin-top: 12px;
+  }
+  @media (max-width: 850px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .lede{font-size:14px;color:var(--ink-soft);margin:0 0 16px;}
+  .lede strong{color:var(--ink);font-weight:500;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:12px;
+  }
+  .card.pending{border-top:2px dashed var(--line);}
+  .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .item-name{font-family:'Fraunces',serif;font-size:17px;font-weight:500;margin:0 0 4px;}
+  .item-meta{font-size:13px;color:var(--ink-soft);}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;
+    padding:3px 9px;border-radius:100px;white-space:nowrap;
+  }
+  .pill.high{background:var(--green-light);color:var(--green);}
+  .pill.mid{background:var(--amber-light);color:var(--amber);}
+  .price{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;white-space:nowrap;}
+  .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  button.act{
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
+    padding:8px 16px;border-radius:8px;border:1px solid var(--line);
+    background:var(--card);cursor:pointer;transition:all .15s;
+  }
+  button.act.primary{background:var(--green);color:#fff;border-color:var(--green);}
+  button.act.primary:hover{background:#25401F;}
+  button.act.ghost:hover{background:var(--bg);}
+  button.act.danger{color:var(--coral);}
+  button.act.danger:hover{background:var(--coral-light);border-color:var(--coral-light);}
+  button.act:disabled{opacity:.45;cursor:default;}
+  button.act[data-edit]{font-family:'IBM Plex Mono',monospace;}
+
+  .edit-row{display:none;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+  .edit-row.open{display:flex;flex-wrap:wrap;}
+  .edit-row label{font-size:12.5px;color:var(--ink-soft);}
+  .edit-row input{
+    width:64px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);
+  }
+
+  .status-note{
+    margin-top:10px;font-size:12.5px;color:var(--ink-soft);
+    display:flex;align-items:center;gap:6px;
+  }
+  .status-note.confirmed{color:var(--green);}
+  .status-note.rejected{color:var(--coral);}
+
+  .budget-flag{
+    font-size:12.5px;padding:8px 10px;border-radius:8px;margin-top:12px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .budget-flag.ok{background:var(--green-light);color:var(--green);}
+  .budget-flag.warn{background:var(--coral-light);color:var(--coral);}
+
+  .checkin{border-left:3px solid var(--amber);background:var(--amber-light);}
+  .checkin .item-name{color:#8A5A14;}
+
+  .save-card{border-left:3px solid var(--green);}
+  .pill.save{background:var(--green-light);color:var(--green);}
+  .compare-row{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;}
+  .compare-box{flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);}
+  .compare-box.better{background:var(--green-light);border-color:var(--green);}
+  .compare-box .label{font-size:11.5px;color:var(--ink-soft);margin-bottom:2px;}
+  .compare-box .val{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;}
+
+  .budget-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px;margin-bottom:16px;}
+  .budget-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .budget-num{font-family:'Fraunces',serif;font-size:30px;font-weight:500;}
+  .budget-num small{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;color:var(--ink-soft);}
+  .bar-track{height:10px;background:var(--bg);border-radius:100px;overflow:hidden;border:1px solid var(--line);}
+  .bar-fill{height:100%;background:var(--green);border-radius:100px;transition:width .3s;}
+  .bar-fill.over{background:var(--coral);}
+  .cap-row{display:flex;align-items:center;gap:12px;margin-top:16px;}
+  .cap-row input[type=range]{flex:1;accent-color:var(--green);}
+  .cap-row .cap-val{font-family:'IBM Plex Mono',monospace;font-size:13px;min-width:64px;text-align:right;}
+
+  .breakdown-item{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .breakdown-item:last-child{border-bottom:none;}
+  .breakdown-item span:first-child{color:var(--ink-soft);}
+  .breakdown-item span:last-child{font-family:'IBM Plex Mono',monospace;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+  @media(max-width:480px){.stat-grid{grid-template-columns:1fr;}}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .stat-card .label{font-size:12px;color:var(--ink-soft);margin-bottom:6px;}
+  .stat-card .num{font-family:'Fraunces',serif;font-size:24px;font-weight:500;}
+  .stat-card .trend{font-size:12px;margin-top:4px;}
+  .trend.up{color:var(--coral);}
+  .trend.down{color:var(--green);}
+  .trend.flat{color:var(--ink-soft);}
+
+  .timeline{border-left:2px solid var(--line);margin-left:6px;padding-left:20px;}
+  .tl-item{position:relative;padding-bottom:20px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-item::before{content:'';position:absolute;left:-25px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--green);}
+  .tl-week{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-bottom:3px;}
+  .tl-note{font-size:13.5px;}
+  footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div>
+        <h1>InstaInventory</h1>
+        <div><span>Prototype — mock data, no live orders placed</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    <!-- Left Column: Primary Panels -->
+    <div class="column">
+      
+      <!-- Approvals Queue Panel -->
+      <section id="approvals">
+        <h2 style="font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 8px;">Approvals</h2>
+        <p class="lede">Confirmed patterns show up here when they're due, alongside smart suggestions that could save you money. Nothing orders itself — every item waits for your tap.</p>
+        <div id="approvals-container">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- Predictive Restock Cycles Panel -->
+      <section id="patterns">
+        <h2 style="font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 8px;">Patterns</h2>
+        <p class="lede">We looked at your past Instamart orders and found recurring items. Nothing gets automated until you confirm a pattern.</p>
+        <div id="patterns-container">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+      
+    </div>
+
+    <!-- Right Column: Supporting Panels -->
+    <div class="column">
+      
+      <!-- Budget Shield Panel -->
+      <section id="budget">
+        <h2 style="font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 8px;">Budget</h2>
+        <p class="lede">A running view of what your confirmed patterns will cost this week, checked against the cap you set.</p>
+
+        <div class="budget-card">
+          <div class="budget-top">
+            <div class="budget-num" id="spend-num">₹0 <small>/ ₹800 spent this week</small></div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
+          <div class="cap-row">
+            <label style="font-size:12.5px;color:var(--ink-soft);white-space:nowrap;">Weekly cap</label>
+            <input type="range" id="cap-slider" min="300" max="1500" step="10" value="800">
+            <span class="cap-val" id="cap-val">₹800</span>
+          </div>
+        </div>
+
+        <div class="budget-card">
+          <p class="item-meta" style="margin:0 0 4px;font-weight:500;color:var(--ink);">This week's predicted items</p>
+          <div id="budget-items-breakdown">
+              <!-- Dynamically populated from API -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Habits & Persona Panel -->
+      <section id="persona">
+        <h2 style="font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 8px;">Your Habits</h2>
+        <p class="lede">Built from your order history, refreshed every week as new orders come in. This is a mirror, not a settings page — nothing here is edited directly.</p>
+
+        <div class="stat-grid">
+          <div class="stat-card" id="stat-spend">
+            <div class="label">Avg weekly grocery spend</div>
+            <div class="num">₹0</div>
+            <div class="trend flat">-</div>
+          </div>
+          <div class="stat-card" id="stat-bulk">
+            <div class="label">Bulk-suggestion acceptance</div>
+            <div class="num">0%</div>
+            <div class="trend flat">-</div>
+          </div>
+          <div class="stat-card" id="stat-resp">
+            <div class="label">Approval responsiveness</div>
+            <div class="num">0%</div>
+            <div class="trend flat">-</div>
+          </div>
+          <div class="stat-card" id="stat-patterns">
+            <div class="label">Confirmed recurring items</div>
+            <div class="num">0</div>
+            <div class="trend flat">-</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="item-name" style="margin-bottom:14px;">How this changed over time</p>
+          <div class="timeline" id="timeline-container">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer>InstaInventory prototype · all data on this page is mock data for UX validation</footer>
+</div>
+
+<script>
+  // Single source of truth state object
+  let globalState = null;
+
+  function formatFrequencyDisplay(days) {
+      const rounded = Math.round(days);
+      if (rounded < 1) {
+          return "daily";
+      }
+      if (rounded === 1) {
+          return "every day";
+      }
+      return `every ${rounded} days`;
+  }
+
+  // API helper
+  async function apiRequest(endpoint, options = {}) {
+      try {
+          const response = await fetch(endpoint, options);
+          if (!response.ok) {
+              const data = await response.json().catch(() => ({}));
+              throw new Error(data.detail || `HTTP Error ${response.status}`);
+          }
+          return await response.json();
+      } catch (err) {
+          console.error(`API Error on ${endpoint}:`, err);
+          alert(`Error: ${err.message}`);
+          return null;
+      }
+  }
+
+  // Unified render function
+  function renderAll(state) {
+      if (!state) return;
+      globalState = state;
+      
+      renderPatterns(state.patterns, state.copy);
+      renderBudget(state.budget, state.copy);
+      renderApprovals(state.approvals, state.copy);
+      renderPersona(state.persona, state.patterns, state.copy);
+  }
+
+  // Render Patterns
+  function renderPatterns(patterns, copy) {
+      const container = document.getElementById("patterns-container");
+      container.innerHTML = "";
+      
+      if (!patterns || patterns.length === 0) {
+          container.innerHTML = `
+              <div style="text-align: center; padding: 2rem; color: var(--ink-soft); border: 1px dashed var(--line); border-radius: var(--radius);">
+                  <p style="font-size: 14px; margin: 0;">${copy.empty_patterns}</p>
+              </div>
+          `;
+          return;
+      }
+      
+      patterns.forEach(p => {
+          const confPct = Math.round(p.confidence * 100);
+          const confClass = p.confidence > 0.7 ? "high" : "mid";
+          const displayName = p.display_name || p.item_name;
+          
+          const card = document.createElement("div");
+          card.className = "card";
+          card.id = `pattern-card-${p.id}`;
+          
+          let actionsHtml = "";
+          if (p.status !== "active") {
+              actionsHtml += `<button class="act primary" onclick="confirmPattern(${p.id})">Confirm</button> `;
+          }
+          actionsHtml += `<button class="act ghost" onclick="toggleEditRow(${p.id})">Edit cycle</button> `;
+          if (p.status !== "dismissed") {
+              actionsHtml += `<button class="act danger" onclick="rejectPattern(${p.id})">Not a pattern</button>`;
+          }
+          
+          const statusText = copy["status_" + p.status] || p.status;
+          
+          card.innerHTML = `
+              <div class="row">
+                  <div>
+                      <p class="item-name">${displayName}</p>
+                      <p class="item-meta" id="meta-${p.id}">Predicted restock every ${Math.round(p.predicted_cycle_days)} days · ${statusText}</p>
+                  </div>
+                  <span class="pill ${confClass}">${confPct}% sure</span>
+              </div>
+              <div class="actions" id="actions-${p.id}">
+                  ${actionsHtml}
+              </div>
+              <div class="edit-row" id="edit-row-${p.id}">
+                  <label>Every</label>
+                  <input type="number" id="input-${p.id}" value="${Math.round(p.predicted_cycle_days)}" min="1" max="120" step="1">
+                  <label>days</label>
+                  <button class="act ghost" onclick="savePatternEdit(${p.id})">Save</button>
+              </div>
+              <div class="status-note" id="status-note-${p.id}" hidden></div>
+          `;
+          container.appendChild(card);
+      });
+  }
+
+  // Render Approvals Queue
+  function renderApprovals(approvals, copy) {
+      const container = document.getElementById("approvals-container");
+      container.innerHTML = "";
+      
+      if (!approvals || approvals.length === 0) {
+          container.innerHTML = `
+              <div style="text-align: center; padding: 2rem; color: var(--ink-soft); border: 1px dashed var(--line); border-radius: var(--radius);">
+                  <p style="font-size: 14px; margin: 0;">${copy.empty_approvals}</p>
+              </div>
+          `;
+          return;
+      }
+      
+      const currentWeekSpend = globalState.budget.current_week_spend;
+      const weeklyCap = globalState.budget.weekly_cap;
+      
+      approvals.forEach(appr => {
+          const card = document.createElement("div");
+          const displayName = appr.display_name || appr.item_name;
+          
+          if (appr.type === "pack_size_suggestion") {
+              card.className = "card pending save-card";
+              
+              const usualUnit = appr.usual_order_desc || "usual pack";
+              const curFreq = appr.current_frequency_days;
+              const sugFreq = appr.suggested_frequency_days;
+              
+              let isClose = false;
+              if (curFreq > 0 && sugFreq > 0) {
+                  const ratio = Math.max(curFreq, sugFreq) / Math.min(curFreq, sugFreq);
+                  if (ratio < 1.25) {
+                      isClose = true;
+                  }
+              }
+              
+              let currentFreqText = `roughly ${formatFrequencyDisplay(curFreq)}`;
+              let suggestedFreqText = "";
+              
+              if (isClose) {
+                  const rCurrent = Math.round(curFreq);
+                  if (rCurrent < 1) {
+                      suggestedFreqText = `About the same frequency as now (daily)`;
+                  } else if (rCurrent === 1) {
+                      suggestedFreqText = `About the same frequency as now (~1 day)`;
+                  } else {
+                      suggestedFreqText = `About the same frequency as now (~${rCurrent} days)`;
+                  }
+              } else {
+                  suggestedFreqText = `roughly ${formatFrequencyDisplay(sugFreq)}`;
+              }
+              
+              card.innerHTML = `
+                  <div class="row">
+                      <div>
+                          <p class="item-name">${displayName}: buy in bulk instead</p>
+                          <p class="item-meta">${appr.explanation}</p>
+                      </div>
+                      <span class="pill save">Save ₹${Math.round(appr.savings)}/mo</span>
+                  </div>
+                  <div class="compare-row">
+                      <div class="compare-box">
+                          <div class="label">Your usual way</div>
+                          <div class="val" style="font-family:'Inter',sans-serif;font-size:14px;font-weight:600;margin-bottom:2px;">
+                              ${appr.usual_order_desc} — ₹${Math.round(appr.usual_order_price)}
+                          </div>
+                          <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">${currentFreqText}</div>
+                          <div style="font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;">(₹${Math.round(appr.current_total_cost)} total this month)</div>
+                      </div>
+                      <div class="compare-box better">
+                          <div class="label">Switch to</div>
+                          <div class="val" style="font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:var(--green);margin-bottom:2px;">
+                              1 pack (${appr.suggested_pack.pack_size}) — ₹${Math.round(appr.suggested_pack.price)}
+                          </div>
+                          <div style="font-size:12.5px;color:var(--green);margin-bottom:4px;font-weight:500;">${suggestedFreqText}</div>
+                          <div style="font-size:11.5px;color:var(--green);font-family:'IBM Plex Mono',monospace;font-weight:500;">(₹${Math.round(appr.suggested_total_cost)} total this month)</div>
+                      </div>
+                  </div>
+                  <div class="actions">
+                      <button class="act primary" onclick="approveApproval(${appr.id}, '${appr.item_name}', this)">Switch to ${appr.suggested_pack.pack_size} packs</button>
+                      <button class="act ghost" onclick="declineApproval(${appr.id}, this)">Keep buying ${usualUnit}</button>
+                  </div>
+                  <div class="status-note" hidden></div>
+              `;
+          } else if (appr.type === "check_in") {
+              card.className = "card pending checkin";
+              card.innerHTML = `
+                  <div class="row">
+                      <div>
+                          <p class="item-name">Check-in: ${displayName}</p>
+                          <p class="item-meta">${appr.explanation}</p>
+                      </div>
+                  </div>
+                  <div class="actions" style="margin-top: 14px;">
+                      <button class="act primary" onclick="resolveDriftConfirm(${appr.pattern_id}, ${appr.id}, this)">Keep predicting (${Math.round(appr.predicted_cycle_days)}d)</button>
+                      <button class="act primary" onclick="resolveDriftApplySuggested(${appr.pattern_id}, ${appr.id}, ${Math.round(appr.suggested_cycle_days)}, this)">Update to ${Math.round(appr.suggested_cycle_days)}d</button>
+                      <button class="act ghost" onclick="resolveDriftEditCustom(${appr.pattern_id}, ${appr.id}, ${appr.predicted_cycle_days}, '${appr.item_name}', this)">Set custom interval</button>
+                      <button class="act danger" onclick="resolveDriftReject(${appr.pattern_id}, ${appr.id}, this)">Stop suggesting this item</button>
+                  </div>
+                  <div class="status-note" hidden></div>
+              `;
+          } else {
+              card.className = "card pending";
+              
+              const projectedTotal = currentWeekSpend + appr.proposed_cost;
+              const diff = Math.abs(weeklyCap - projectedTotal);
+              let budgetFlagHtml = "";
+              let approveBtnText = "Approve";
+              
+              if (projectedTotal <= weeklyCap) {
+                  budgetFlagHtml = `<div class="budget-flag ok">Adds up to ₹${projectedTotal.toFixed(0)} this week — ₹${diff.toFixed(0)} under your ₹${weeklyCap.toFixed(0)} cap</div>`;
+              } else {
+                  budgetFlagHtml = `<div class="budget-flag warn">Adds up to ₹${projectedTotal.toFixed(0)} this week — ₹${diff.toFixed(0)} over your ₹${weeklyCap.toFixed(0)} cap</div>`;
+                  approveBtnText = "Approve anyway";
+              }
+              
+              card.innerHTML = `
+                  <div class="row">
+                      <div>
+                          <p class="item-name">${displayName}, restock</p>
+                          <p class="item-meta">${appr.explanation}</p>
+                      </div>
+                      <span class="price">₹${Math.round(appr.proposed_cost)}</span>
+                  </div>
+                  ${budgetFlagHtml}
+                  <div class="actions">
+                      <button class="act primary" onclick="approveApproval(${appr.id}, '${appr.item_name}', this)">${approveBtnText}</button>
+                      <button class="act danger" onclick="declineApproval(${appr.id}, this)">Decline</button>
+                  </div>
+                  <div class="status-note" hidden></div>
+              `;
+          }
+          container.appendChild(card);
+      });
+  }
+
+  // Render Budget
+  function renderBudget(budget, copy) {
+      const capSlider = document.getElementById("cap-slider");
+      const capVal = document.getElementById("cap-val");
+      const spendNum = document.getElementById("spend-num");
+      const barFill = document.getElementById("bar-fill");
+      
+      const currentWeekSpend = budget.current_week_spend;
+      const weeklyCap = budget.weekly_cap;
+      
+      capSlider.value = weeklyCap;
+      capVal.textContent = `₹${Math.round(weeklyCap)}`;
+      spendNum.innerHTML = `₹${Math.round(currentWeekSpend)} <small>/ ₹${Math.round(weeklyCap)} predicted this week</small>`;
+      
+      const pct = Math.min((currentWeekSpend / weeklyCap) * 100, 100) || 0;
+      barFill.style.width = `${pct}%`;
+      barFill.classList.toggle('over', currentWeekSpend > weeklyCap);
+      
+      // Populate breakdown items
+      const breakdownContainer = document.getElementById("budget-items-breakdown");
+      breakdownContainer.innerHTML = "";
+      let totalCost = 0;
+      if (budget.weekly_items && budget.weekly_items.length > 0) {
+          budget.weekly_items.forEach(item => {
+              totalCost += item.total_cost;
+              const div = document.createElement("div");
+              div.className = "breakdown-item";
+              
+              const displayName = item.display_name || item.item_name;
+              const unitText = item.unit ? ` ${item.unit}` : "";
+              div.style.flexDirection = "column";
+              div.style.alignItems = "stretch";
+              
+              let noteHtml = item.note ? `<div style="font-size:11px;color:var(--green);margin-top:2px;font-style:italic;">${item.note}</div>` : "";
+              div.innerHTML = `
+                  <div style="display:flex;justify-content:space-between;width:100%;">
+                      <span>${displayName} × ${item.quantity}${unitText}</span>
+                      <span>₹${Math.round(item.total_cost)}</span>
+                  </div>
+                  ${noteHtml}
+              `;
+              breakdownContainer.appendChild(div);
+          });
+      } else {
+          breakdownContainer.innerHTML = `<div class="breakdown-item" style="color:var(--ink-soft);font-style:italic;">${copy.empty_weekly_items}</div>`;
+      }
+      
+      // Append total row
+      const totalDiv = document.createElement("div");
+      totalDiv.className = "breakdown-item";
+      totalDiv.style.borderTop = "1px solid var(--line)";
+      totalDiv.style.borderBottom = "none";
+      totalDiv.style.paddingTop = "8px";
+      totalDiv.style.marginTop = "8px";
+      totalDiv.style.fontWeight = "bold";
+      totalDiv.innerHTML = `<span style="color:var(--ink); font-weight:bold;">Total</span><span style="color:var(--ink); font-weight:bold;">₹${Math.round(totalCost)}</span>`;
+      breakdownContainer.appendChild(totalDiv);
+  }
+
+  // Render Persona
+  function renderPersona(persona, patterns, copy) {
+      const latest = persona.latest || { avg_weekly_spend: 0, bulk_acceptance_rate: 0, approval_rate: 0, week_of: "N/A" };
+      
+      // Stat 1: Avg weekly grocery spend
+      const spendCard = document.getElementById("stat-spend");
+      let spendTrendHtml = `<div class="trend flat">No past trend data</div>`;
+      if (persona.timeline && persona.timeline.length > 1) {
+          const prev = persona.timeline[1];
+          const diff = latest.avg_weekly_spend - prev.avg_weekly_spend;
+          if (diff > 0) {
+              spendTrendHtml = `<div class="trend up">↑ ₹${Math.round(diff)} vs last week</div>`;
+          } else if (diff < 0) {
+              spendTrendHtml = `<div class="trend down">↓ ₹${Math.round(Math.abs(diff))} vs last week</div>`;
+          } else {
+              spendTrendHtml = `<div class="trend flat">Flat vs last week</div>`;
+          }
+      }
+      spendCard.innerHTML = `
+          <div class="label">Avg weekly grocery spend</div>
+          <div class="num">₹${Math.round(latest.avg_weekly_spend)}</div>
+          ${spendTrendHtml}
+      `;
+      
+      // Stat 2: Bulk-suggestion acceptance
+      const bulkCard = document.getElementById("stat-bulk");
+      const bulkPct = Math.round(latest.bulk_acceptance_rate * 100);
+      let bulkNote = "No suggestion history";
+      if (latest.bulk_acceptance_rate > 0.6) {
+          bulkNote = "Usually says yes to switching";
+      } else if (latest.bulk_acceptance_rate > 0) {
+          bulkNote = "Prefers usual pack sizes";
+      }
+      bulkCard.innerHTML = `
+          <div class="label">Bulk-suggestion acceptance</div>
+          <div class="num">${bulkPct}%</div>
+          <div class="trend down">${bulkNote}</div>
+      `;
+      
+      // Stat 3: Approval responsiveness
+      const respCard = document.getElementById("stat-resp");
+      const respPct = Math.round(latest.approval_rate * 100);
+      let respNote = "No response history";
+      if (latest.approval_rate > 0.7) {
+          respNote = "Responds within a day, most weeks";
+      } else if (latest.approval_rate > 0) {
+          respNote = "Responds occasionally";
+      }
+      respCard.innerHTML = `
+          <div class="label">Approval responsiveness</div>
+          <div class="num">${respPct}%</div>
+          <div class="trend flat">${respNote}</div>
+      `;
+      
+      // Stat 4: Confirmed recurring items
+      const patternsCard = document.getElementById("stat-patterns");
+      const activeCount = patterns.filter(p => p.status === "active").length;
+      const pendingCount = patterns.filter(p => p.status === "pending" || p.status === "drifted").length;
+      patternsCard.innerHTML = `
+          <div class="label">Confirmed recurring items</div>
+          <div class="num">${activeCount}</div>
+          <div class="trend flat">${pendingCount} pending confirmation</div>
+      `;
+      
+      // Populate Timeline
+      const timelineContainer = document.getElementById("timeline-container");
+      timelineContainer.innerHTML = "";
+      if (persona.timeline && persona.timeline.length > 0) {
+          persona.timeline.forEach(snap => {
+              const tlItem = document.createElement("div");
+              tlItem.className = "tl-item";
+              tlItem.innerHTML = `
+                  <div class="tl-week">Week of ${snap.week_of}</div>
+                  <div class="tl-note">${snap.notes || `Average weekly spend was ₹${Math.round(snap.avg_weekly_spend)} with ${Math.round(snap.approval_rate * 100)}% responsiveness.`}</div>
+              `;
+              timelineContainer.appendChild(tlItem);
+          });
+      } else {
+          timelineContainer.innerHTML = `<p class="item-meta">${copy.empty_persona}</p>`;
+      }
+  }
+
+  // Confirm / Reject Pattern actions
+  async function confirmPattern(id) {
+      const card = document.getElementById(`pattern-card-${id}`);
+      const res = await apiRequest(`/patterns/${id}/confirm`, { method: "POST" });
+      if (res) {
+          lockCard(card, 'confirmed', 'Confirmed — this item is now part of your automated reorder list');
+          setTimeout(() => renderAll(res), 1000);
+      }
+  }
+
+  async function rejectPattern(id) {
+      const card = document.getElementById(`pattern-card-${id}`);
+      const res = await apiRequest(`/patterns/${id}/reject`, { method: "POST" });
+      if (res) {
+          lockCard(card, 'rejected', 'Marked as not a pattern — you won\'t be asked about this item again');
+          setTimeout(() => renderAll(res), 1000);
+      }
+  }
+
+  function toggleEditRow(id) {
+      const row = document.getElementById(`edit-row-${id}`);
+      row.classList.toggle('open');
+  }
+
+  async function savePatternEdit(id) {
+      const input = document.getElementById(`input-${id}`);
+      const days = parseFloat(input.value);
+      if (isNaN(days) || days <= 0) {
+          alert("Please enter a valid positive number for cycle days.");
+          return;
+      }
+      const res = await apiRequest(`/patterns/${id}/edit-cycle`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ predicted_cycle_days: days })
+      });
+      if (res) {
+          const card = document.getElementById(`pattern-card-${id}`);
+          const meta = document.getElementById(`meta-${id}`);
+          meta.textContent = `Updated by you · every ${days} days · status: active`;
+          const row = document.getElementById(`edit-row-${id}`);
+          row.classList.remove('open');
+          setTimeout(() => renderAll(res), 1000);
+      }
+  }
+
+  function lockCard(card, kind, msg) {
+      card.querySelectorAll('button').forEach(b => b.disabled = true);
+      const note = card.querySelector('.status-note');
+      note.hidden = false;
+      note.textContent = msg;
+      note.className = 'status-note ' + kind;
+      card.style.opacity = '0.72';
+  }
+
+  // Approval actions
+  async function approveApproval(id, itemName, btnEl) {
+      const confirmAction = confirm(`Are you sure you want to approve this restock order? This calls Swiggy Instamart checkout API and completes the order.`);
+      if (confirmAction) {
+          const card = btnEl.closest('.card');
+          const res = await apiRequest(`/approvals/${id}/approve`, { method: "POST" });
+          if (res) {
+              lockCard(card, 'confirmed', `Approved — order sent to Instamart`);
+              setTimeout(() => renderAll(res), 1000);
+          }
+      }
+  }
+
+  async function declineApproval(id, btnEl) {
+      const card = btnEl.closest('.card');
+      const res = await apiRequest(`/approvals/${id}/decline`, { method: "POST" });
+      if (res) {
+          lockCard(card, 'rejected', 'Declined — noted for next check-in');
+          setTimeout(() => renderAll(res), 1000);
+      }
+  }
+
+  // Drift resolutions
+  async function resolveDriftConfirm(patternId, approvalId, btnEl) {
+      const card = btnEl.closest('.card');
+      const confirmRes = await apiRequest(`/patterns/${patternId}/confirm`, { method: "POST" });
+      if (confirmRes) {
+          const declineRes = await apiRequest(`/approvals/${approvalId}/decline`, { method: "POST" });
+          if (declineRes) {
+              lockCard(card, 'confirmed', 'Confirmed — current cycle interval verified');
+              setTimeout(() => renderAll(declineRes), 1000);
+          }
+      }
+  }
+
+  async function resolveDriftReject(patternId, approvalId, btnEl) {
+      const card = btnEl.closest('.card');
+      const rejectRes = await apiRequest(`/patterns/${patternId}/reject`, { method: "POST" });
+      if (rejectRes) {
+          const declineRes = await apiRequest(`/approvals/${approvalId}/decline`, { method: "POST" });
+          if (declineRes) {
+              lockCard(card, 'rejected', 'Stop suggesting this item — pattern dismissed');
+              setTimeout(() => renderAll(declineRes), 1000);
+          }
+      }
+  }
+
+  async function resolveDriftApplySuggested(patternId, approvalId, suggestedDays, btnEl) {
+      const card = btnEl.closest('.card');
+      const editRes = await apiRequest(`/patterns/${patternId}/edit-cycle`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ predicted_cycle_days: suggestedDays })
+      });
+      if (editRes) {
+          await apiRequest(`/patterns/${patternId}/confirm`, { method: "POST" });
+          const declineRes = await apiRequest(`/approvals/${approvalId}/decline`, { method: "POST" });
+          if (declineRes) {
+              lockCard(card, 'confirmed', `Confirmed — cycle updated to ${suggestedDays} days`);
+              setTimeout(() => renderAll(declineRes), 1000);
+          }
+      }
+  }
+
+  async function resolveDriftEditCustom(patternId, approvalId, currentDays, itemName, btnEl) {
+      const newDaysStr = prompt(`Enter correct restocking cycle interval in days for ${itemName}:`, currentDays);
+      if (newDaysStr !== null) {
+          const newDays = parseFloat(newDaysStr);
+          if (isNaN(newDays) || newDays <= 0) {
+              alert("Please enter a valid positive number for cycle days.");
+              return;
+          }
+          const card = btnEl.closest('.card');
+          const editRes = await apiRequest(`/patterns/${patternId}/edit-cycle`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ predicted_cycle_days: newDays })
+          });
+          if (editRes) {
+              await apiRequest(`/patterns/${patternId}/confirm`, { method: "POST" });
+              const declineRes = await apiRequest(`/approvals/${approvalId}/decline`, { method: "POST" });
+              if (declineRes) {
+                  lockCard(card, 'confirmed', `Confirmed — cycle updated to ${newDays} days`);
+                  setTimeout(() => renderAll(declineRes), 1000);
+              }
+          }
+      }
+  }
+
+  // Budget Cap update slider listeners
+  const capSlider = document.getElementById('cap-slider');
+  const capVal = document.getElementById('cap-val');
+  const barFill = document.getElementById('bar-fill');
+  const spendNum = document.getElementById('spend-num');
+
+  capSlider.addEventListener('input', () => {
+      const cap = Number(capSlider.value);
+      capVal.textContent = '₹' + cap;
+      const spend = globalState ? globalState.budget.current_week_spend : 0;
+      const pct = Math.min((spend / cap) * 100, 100);
+      barFill.style.width = pct + '%';
+      barFill.classList.toggle('over', spend > cap);
+      spendNum.innerHTML = '₹' + Math.round(spend) + ' <small>/ ₹' + cap + ' predicted this week</small>';
+  });
+
+  capSlider.addEventListener('change', async () => {
+      const cap = Number(capSlider.value);
+      const res = await apiRequest("/budget/cap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weekly_cap: cap })
+      });
+      if (res) {
+          renderAll(res);
+      }
+  });
+
+  // Initial load
+  window.addEventListener("DOMContentLoaded", async () => {
+      const state = await apiRequest("/state");
+      if (state) {
+          renderAll(state);
+      }
+  });
+</script>
+</body>
+</html>

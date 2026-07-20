@@ -19,7 +19,7 @@ def get_db_connection(db_path: str) -> sqlite3.Connection:
 def init_db(path: str) -> None:
     """
     Initializes the database schema if it does not already exist.
-    Creates tables: users, order_history, patterns, approvals, and persona_snapshots.
+    Creates tables: users, items, order_history, patterns, approvals, and persona_snapshots.
     """
     conn = get_db_connection(path)
     cursor = conn.cursor()
@@ -32,7 +32,17 @@ def init_db(path: str) -> None:
         );
     """)
     
-    # 2. order_history
+    # 2. items
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            canonical_name TEXT UNIQUE NOT NULL,
+            display_name TEXT NOT NULL,
+            unit_category TEXT NOT NULL CHECK(unit_category IN ('volume', 'weight', 'countable'))
+        );
+    """)
+    
+    # 3. order_history
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS order_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,11 +50,14 @@ def init_db(path: str) -> None:
             quantity REAL NOT NULL,
             unit TEXT NOT NULL,
             price REAL NOT NULL,
-            ordered_at TEXT NOT NULL
+            ordered_at TEXT NOT NULL,
+            order_source TEXT,
+            item_id INTEGER,
+            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
         );
     """)
     
-    # 3. patterns
+    # 4. patterns
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS patterns (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,11 +65,13 @@ def init_db(path: str) -> None:
             predicted_cycle_days REAL NOT NULL,
             confidence REAL NOT NULL,
             status TEXT NOT NULL,
-            last_confirmed_at TEXT
+            last_confirmed_at TEXT,
+            item_id INTEGER,
+            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
         );
     """)
     
-    # 4. approvals
+    # 5. approvals
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS approvals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,11 +80,13 @@ def init_db(path: str) -> None:
             proposed_cost REAL NOT NULL,
             user_response TEXT,
             responded_at TEXT,
-            FOREIGN KEY (pattern_id) REFERENCES patterns(id) ON DELETE CASCADE
+            item_id INTEGER,
+            FOREIGN KEY (pattern_id) REFERENCES patterns(id) ON DELETE CASCADE,
+            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
         );
     """)
     
-    # 5. persona_snapshots
+    # 6. persona_snapshots
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS persona_snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +97,62 @@ def init_db(path: str) -> None:
             approval_rate REAL NOT NULL,
             notes TEXT
         );
+    """)
+    
+    # Self-healing migrations for existing DBs
+    try:
+        cursor.execute("ALTER TABLE order_history ADD COLUMN order_source TEXT;")
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        cursor.execute("ALTER TABLE order_history ADD COLUMN item_id INTEGER REFERENCES items(id);")
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        cursor.execute("ALTER TABLE patterns ADD COLUMN item_id INTEGER REFERENCES items(id);")
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        cursor.execute("ALTER TABLE approvals ADD COLUMN item_id INTEGER REFERENCES items(id);")
+    except sqlite3.OperationalError:
+        pass
+        
+    # Seed default items in items table
+    seed_items = [
+        {"canonical_name": "milk", "display_name": "Toned Milk", "unit_category": "volume"},
+        {"canonical_name": "tomato", "display_name": "Tomato", "unit_category": "weight"},
+        {"canonical_name": "eggs", "display_name": "Eggs", "unit_category": "countable"},
+        {"canonical_name": "rice", "display_name": "Basmati Rice", "unit_category": "weight"},
+        {"canonical_name": "oil", "display_name": "Sunflower Oil", "unit_category": "volume"},
+        {"canonical_name": "onion", "display_name": "Onion", "unit_category": "weight"},
+        {"canonical_name": "peach", "display_name": "Peach", "unit_category": "weight"},
+        {"canonical_name": "atta", "display_name": "Atta", "unit_category": "weight"},
+        {"canonical_name": "bread", "display_name": "Bread", "unit_category": "countable"}
+    ]
+    for item in seed_items:
+        cursor.execute("""
+            INSERT OR IGNORE INTO items (canonical_name, display_name, unit_category)
+            VALUES (?, ?, ?);
+        """, (item["canonical_name"], item["display_name"], item["unit_category"]))
+        
+    # Backfill item_id on existing rows
+    cursor.execute("""
+        UPDATE order_history
+        SET item_id = (SELECT id FROM items WHERE items.canonical_name = order_history.item_name)
+        WHERE item_id IS NULL;
+    """)
+    cursor.execute("""
+        UPDATE patterns
+        SET item_id = (SELECT id FROM items WHERE items.canonical_name = patterns.item_name)
+        WHERE item_id IS NULL;
+    """)
+    cursor.execute("""
+        UPDATE approvals
+        SET item_id = (SELECT item_id FROM patterns WHERE patterns.id = approvals.pattern_id)
+        WHERE item_id IS NULL;
     """)
     
     conn.commit()

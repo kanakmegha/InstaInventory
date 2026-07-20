@@ -86,6 +86,10 @@ def seed_mock_orders(db_path: str) -> None:
         }
     }
     
+    # Fetch item_id mapping from items table
+    cursor.execute("SELECT id, canonical_name FROM items;")
+    item_map = {row["canonical_name"]: row["id"] for row in cursor.fetchall()}
+    
     orders = []
     
     for item_name, config in items.items():
@@ -106,13 +110,16 @@ def seed_mock_orders(db_path: str) -> None:
             second = rng.randint(0, 59)
             ordered_time = current_date.replace(hour=hour, minute=minute, second=second)
             
+            item_id = item_map.get(item_name)
             # Record the order
             orders.append((
                 item_name,
                 quantity,
                 config["unit"],
                 total_price,
-                ordered_time.isoformat()
+                ordered_time.isoformat(),
+                "seed",
+                item_id
             ))
             
             # 4. Advance date by a random interval
@@ -128,8 +135,8 @@ def seed_mock_orders(db_path: str) -> None:
     
     # Bulk insert
     cursor.executemany("""
-        INSERT INTO order_history (item_name, quantity, unit, price, ordered_at)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO order_history (item_name, quantity, unit, price, ordered_at, order_source, item_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     """, orders)
     
     # Seed a default user if not already present

@@ -48,6 +48,8 @@ def test_find_pack_size_options_parsing(monkeypatch):
     2. find_pack_size_options() parsing logic is tested against a hand-written
        fake API response.
     """
+    monkeypatch.setenv("USE_MOCK_DATA", "False")
+    monkeypatch.setenv("SWIGGY_ACCESS_TOKEN", "fake_access_token")
     fake_search_response = {
         "jsonrpc": "2.0",
         "result": {
